@@ -1,5 +1,4 @@
 function workFn(config) {
-    progress();
     Array.prototype.remove = function() {
         var what, a = arguments, L = a.length, ax;
         while (L && this.length) {
@@ -23,8 +22,8 @@ function workFn(config) {
         
         move(dx, dy, index) {
             index.remove(this);
-            this.x = Math.max(0, Math.min(1, this.x + dx));
-            this.y = Math.max(0, Math.min(1, this.y + dy));
+            this.x = Math.abs((this.x + dx) % 1);
+            this.y = Math.abs((this.y + dy) % 1);
             index.add(this);
         }
     }
@@ -130,16 +129,18 @@ function workFn(config) {
         }
     
         tick(time) {
-            if (time % 10 === 0) {
+            if (!this.config.render_mode && time % 30 === 0) {
                 progress();
             }
 
-            // TODO: Move people around using smarter logic
             for (let i = 0; i < this.n; i++) {
                 if (this.rng() < this.config.movement_chance) {
+                    const angle = this.rng() * Math.PI * 2;
+                    const mag = this.rng() * this.config.movement_max_amt;
+
                     this.people[i].move(
-                        this.rng() * this.config.movement_max_amt,
-                        this.rng() * this.config.movement_max_amt,
+                        Math.sin(angle) * mag,
+                        Math.cos(angle) * mag,
                         this.space_index,
                     );
                 }
@@ -180,7 +181,7 @@ function workFn(config) {
             for (let i = 1; i < n_ticks; i++) {
                 this.tick(i);
             }
-    
+
             // Use this to configure what gets returned
             // return this.results;
             let last = this.results[n_ticks - 1];
@@ -194,6 +195,15 @@ function workFn(config) {
         }
     }
     
-    const model = new SIRModel(config);
-    return model.run_model();
+    const results = [];
+    for (let i = 0; i <= (config.iters || 10); i++) {
+        const model = new SIRModel(config);
+        if (config.render_mode) {
+            return model
+        }
+        
+        results.push(model.run_model());
+    }
+
+    return results;
 }
