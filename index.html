@@ -5,14 +5,16 @@
     <script src='https://cdn.plot.ly/plotly-2.3.1.min.js'></script>
     <script src="https://scheduler.distributed.computer/dcp-client/dcp-client.js"></script>
     <script src="./sir_model.js"></script>
+    <script src="./render_sim.js"></script>
     <script>
       const $ = document.querySelector.bind(document);
 
       async function go(runType) {
-        const n_jobs = 10
+        const n_jobs = 10000;
         const inputSet = [];
         inputSet.length = n_jobs;
-        inputSet.fill({ infection_radius: 0.015, S0: 1000, iters: 100 }, 0, n_jobs);
+        inputSet.fill({ infection_radius: 0.02, iters: 1 }, 0, n_jobs);
+        exec_results = [];
         console.log(inputSet);
 
         let n_response = 0;
@@ -21,8 +23,25 @@
         job.on('result',           (ev) => {
           n_response++; 
           $('#taRight').value += "Response From: " + ev.sliceNumber + " Percent: " + (n_response/n_jobs)*100 + "%\n";
+          console.log(ev)
+          for (let r of ev.result) {
+            exec_results.push(JSON.parse(r).maxR0);
+          }
+          console.log(exec_results);
+          var trace = {
+              x: exec_results,
+              type: 'histogram',
+              // nbinsx: 100
+              xbins: {
+                start: 2.5,
+                end: 3.5,
+                size: 0.01
+              }
+            };
+          var data = [trace];
+          Plotly.newPlot('myDiv', data);
         });
-        job.computeGroups=[{joinKey: 'insight', joinSecret: 'dcp'}]
+        job.computeGroups=[{joinKey: 'anu-edge', joinSecret: 'idMMZpFPu6'}]
 
         if (runType == 0) {
           const resultSet = await job.exec();
@@ -43,104 +62,18 @@
   </head>
   <body>
     <h1>Distributed Covid Simulation</h1>
-    <input type="button" id="configToggle" value="Toggle Configuration" onclick="toggleConfig()">
-    
-
-
-      <!-- config = {
-        S0: 9950,
-        I0: 50,
-        R0: 0,
-
-        infection_radius: 0.02,
-        infection_chance: 0.01,
-    
-        recovery_rate: 0.1,
-        recovery_delay: 14,
-
-        movement_chance: 0.20,
-        movement_max_amt: 0.001,
-    }; -->
       <p>
         Run Simulation DCP:
         <input type="button" value="Distribute" onclick="go(0)">
         <input type="button" value="Distribute [LOCAL]" onclick="go(1)">
       </p>
 
+      <div id="myDiv"></div>
 
       <div style='display: inline-block'>Ready State Change<br><textarea cols="40" rows="25" id="taLeft"></textarea></div>
       <div style='display: inline-block'>Individual Results<br> <textarea cols="60" rows="25" id="taRight"></textarea></div>
     </div>
     <div>
-      <script>
-        async function start_render() {
-          const model = workFn({ render_mode: true });
-          
-          const canvas = document.getElementById("outputCanvas");
-          canvas.width = 400;
-          canvas.height = 400;
-          const canvasWidth = canvas.width;
-          const canvasHeight = canvas.height;
-          const ctx = canvas.getContext("2d");
-          ctx.imageSmoothingEnabled= false
-
-          ctx.font = "700 14px Consolas";
-          ctx.fillStyle = "#0000ff";
-
-          // That's how you define the value of a pixel //
-          function drawPixel(canvasData, x, y, r, g, b, a=255) {
-            const index = (Math.floor(x * canvasWidth) + Math.floor(y * canvasHeight) * canvasWidth) * 4;
-
-            canvasData.data[index + 0] = r;
-            canvasData.data[index + 1] = g;
-            canvasData.data[index + 2] = b;
-            canvasData.data[index + 3] = a;
-          }
-
-          const maxTime = 500;
-          let time = 0;
-          const t = setInterval(() => {
-            if (time >= maxTime) {
-              clearInterval(t);
-              return;
-            }
-
-            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-            const canvasData = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
-            model.tick(time);
-            model.tick(time);
-            time += 2;
-
-            for (person of model.people) {
-              if (person.status === 0) {
-                drawPixel(canvasData, person.x, person.y, 0, 0, 0);
-              } else if (person.status === -1) {
-                drawPixel(canvasData, person.x, person.y, 200, 200, 200);
-              } else {
-                drawPixel(canvasData, person.x, person.y, 255, 0, 0);
-              }
-            }
-            ctx.putImageData(canvasData, 0, 0);
-        
-            ctx.fillText(`Tick: ${time}`, 10, 20);
-            ctx.fillText(`S: ${model.people.filter(i => i.status === 0).length}`, 10, 35);
-            ctx.fillText(`I: ${model.people.filter(i => i.status > 0).length}`, 10, 50);
-            ctx.fillText(`R: ${model.people.filter(i => i.status === -1).length}`, 10, 65);            
-            
-            const last = model.people
-            // .filter(
-            //     p => p.infectTime >= 0 
-            //         && p.infectTime > time - 50
-            //         && p.status === -1,
-            // );
-            const trans = last.reduce((p, i) => i.infectedOthers + p, 0);
-            const transFullySus = last.reduce((p, i) => i.infectedOthersFullySus + p, 0);
-    
-            ctx.fillText(`Effective Reproduction Number: ${Math.round((trans / last.length || 0) * 100) / 100}`, 10, 80);            
-            ctx.fillText(`Basic Reproduction Number:     ${Math.round((transFullySus / last.length || 0) * 100) / 100}`, 10, 95);            
-          }, 1000/60);
-        }
-      </script>
       <p>
         Run Simulation DCP:
         <input type="button" value="Start Render" onclick="start_render()">

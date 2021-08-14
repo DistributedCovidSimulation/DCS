@@ -113,7 +113,7 @@ function workFn(config) {
         summarize_results(time) {
             const last = this.people.filter(
                 p => p.infectTime >= 0 
-                    && p.infectTime > time - 50
+                    // && p.infectTime > time - 50
                     && p.status === -1,
             );
             const trans = last.reduce((p, i) => i.infectedOthers + p, 0);
