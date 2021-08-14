@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <script src="https://scheduler.distributed.computer/dcp-client/dcp-client.js"></script>
+    <script src="./sir_model.js"></script>
+    <script>
+      const $ = document.querySelector.bind(document);
+
+      async function go(runType) {
+        const inputSet = [];
+        inputSet.length = 10;
+        inputSet.fill({ infection_radius: 0.015 }, 0, 10);
+        console.log(inputSet);
+
+        const job = dcp.compute.for(inputSet, workFn);
+        job.on('readystatechange', (ev) => $('#taLeft').value += '\nReady State:' + ev);
+        job.on('result',           (ev) => $('#taRight').value += Object.entries(ev)+'\n');
+        job.computeGroups=[{joinKey: 'sethacks', joinSecret: 'dcp'}]
+
+        if (runType == 0) {
+          const resultSet = await job.exec();
+        }
+        else if (runType == 1) {
+          const resultSet = await job.localExec();
+        }
+        else {
+          alert ("bruh")
+        }
+        
+        console.log(Array.from(resultSet))
+
+        const allCaps = Array.from(resultSet).join('');
+      }
+
+    </script>
+  </head>
+  <body>
+    <p>
+      Run Simulation DCP:
+      <input type="button" value="Distribute" onclick="go(0)">
+      <input type="button" value="Distribute [LOCAL]" onclick="go(1)">
+    </p>
+    <div style='display: inline-block'>Ready State Change<br><textarea cols="40" rows="25" id="taLeft"></textarea></div>
+    <div style='display: inline-block'>Individual Results<br> <textarea cols="60" rows="25" id="taRight"></textarea></div>
+  </body>
+</html>
