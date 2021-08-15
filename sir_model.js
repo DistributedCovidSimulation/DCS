@@ -64,18 +64,18 @@ function workFn(config) {
     
     class SIRModel {
         config = {
-            S0: 9950,
-            I0: 50,
+            S0: 5000,
+            I0: 25,
             R0: 0,
     
             infection_radius: 0.02,
             infection_chance: 0.01,
         
-            recovery_rate: 0.1,
-            recovery_delay: 14,
+            recovery_rate: 0.05,
+            recovery_delay: 30,
     
-            movement_chance: 0.20,
-            movement_max_amt: 0.001,
+            movement_chance: 0.22,
+            movement_max_amt: 0.005,
         };
     
         results = [];
@@ -129,9 +129,6 @@ function workFn(config) {
         }
     
         tick(time) {
-            if (!this.config.render_mode && time % 30 === 0) {
-                progress();
-            }
 
             for (let i = 0; i < this.n; i++) {
                 if (this.rng() < this.config.movement_chance) {
@@ -201,6 +198,8 @@ function workFn(config) {
         if (config.render_mode) {
             return model
         }
+
+        progress(1 / (config.iters || 10));
         
         results.push(model.run_model());
     }

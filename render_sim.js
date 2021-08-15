@@ -1,5 +1,6 @@
 async function start_render() {
-    const model = workFn({ render_mode: true });
+    config = JSON.parse(document.getElementById("config").value);
+    const model = workFn({ ...config, render_mode: true });
     
     const canvas = document.getElementById("outputCanvas");
     canvas.width = 400;
@@ -53,11 +54,11 @@ async function start_render() {
       ctx.fillText(`R: ${model.people.filter(i => i.status === -1).length}`, 10, 65);            
       
       const last = model.people
-      // .filter(
-      //     p => p.infectTime >= 0 
-      //         && p.infectTime > time - 50
-      //         && p.status === -1,
-      // );
+        .filter(
+            p => p.infectTime >= 0 
+                // && p.infectTime > time - 50
+                && p.status === -1,
+        );
       const trans = last.reduce((p, i) => i.infectedOthers + p, 0);
       const transFullySus = last.reduce((p, i) => i.infectedOthersFullySus + p, 0);
 
