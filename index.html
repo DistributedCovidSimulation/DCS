@@ -10,23 +10,90 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.4.4/math.js"></script>
     <script src="./sir_model.js"></script>
     <script src="./render_sim.js"></script>
+    <script src="./prettyInt.js"></script>
     <script>
+      
+      let nInteractions = 0;
       let x_results = []
       let y_results = []
+      let std_results = []
+      
+      let y2_results = []
+      let std2_results = []
+      
+      let y3_results = []
+      let std3_results = []
+      
       async function go(runType) {
         var trace1 = {
           x: x_results, 
           y: y_results, 
           line: {color: "rgb(0,100,80)"}, 
           mode: "lines", 
-          name: "Fair", 
+          name: "R0", 
           type: "scatter"
         };
-        var data = [trace1];
+
+        var trace2 = {
+          x: [], 
+          y: [], 
+          fill: "tozerox", 
+          fillcolor: "rgba(231,107,243,0.2)", 
+          line: {color: "transparent"}, 
+          name: "R0 (StdDev)", 
+          showlegend: false, 
+          type: "scatter"
+        };
+
+        var trace3 = {
+          x: x_results, 
+          y: y2_results, 
+          line: {color: "rgb(100,100,80)"}, 
+          mode: "lines", 
+          name: "% Infected", 
+          type: "scatter"
+        };
+
+        var trace4 = {
+          x: [], 
+          y: [], 
+          fill: "tozerox", 
+          fillcolor: "rgba(131,207,243,0.2)", 
+          line: {color: "transparent"}, 
+          name: "% Infected (StdDev)", 
+          showlegend: false, 
+          type: "scatter"
+        };
+        
+
+        var trace5 = {
+          x: x_results, 
+          y: y3_results, 
+          line: {color: "rgb(0,100,100)"}, 
+          mode: "lines", 
+          name: "Rt", 
+          type: "scatter"
+        };
+
+        var trace6 = {
+          x: [], 
+          y: [], 
+          fill: "tozerox", 
+          fillcolor: "rgba(131,207,143,0.2)", 
+          line: {color: "transparent"}, 
+          name: "Rt (StdDev)", 
+          showlegend: false, 
+          type: "scatter"
+        };
+
+        var data = [trace1, trace2];
+        var data2 = [trace3, trace4];
+        var data3 = [trace5, trace6];
         var layout = {
           paper_bgcolor: "rgb(255,255,255)", 
           plot_bgcolor: "rgb(229,229,229)", 
           xaxis: {
+            title: "Contagious Duration (Days)",
             gridcolor: "rgb(255,255,255)", 
             showgrid: true, 
             showline: false, 
@@ -43,75 +110,203 @@
             tickcolor: "rgb(127,127,127)", 
             ticks: "outside", 
             zeroline: false
-          }
+          },
         };
+        const layout1 = {
+          ...layout,
+          title: 'Basic Reproduction Number (R0)',
+        }
+        const layout2 = {
+          ...layout,
+          title: '% Population Infected',
+        }
+        const layout3 = {
+          ...layout,
+          title: 'Effective Reproductive Number',
+        }
+        $("#pg-box").show()
 
-        let x_values = [0.025, 0.0225, 0.02, 0.0175, 0.015, 0.0125, 0.01];
-        const n_jobs = 20;
+        let x_values = [1, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45, 48, 51, 54, 57, 60];
+        // let x_values = [5, 10, 15, 20];
+        const n_jobs = 30;
         const n_iters = 1;
 
-        let tot_req = n_jobs*x_values.length*n_iters;
+        let tot_req = n_jobs * x_values.length * n_iters;
         let n_req = 0;
 
+        let inputSet = [];
+        inputSet.length = n_jobs;
+
+        let exec_results = [];
+        let exec2_results = [];
+        let exec3_results = [];
+        
         for (let x_i = 0; x_i < x_values.length; x_i++){
           x_results.push(x_values[x_i]);
+          
           y_results.push(0);
-          let inputSet = [];
-          var exec_results = [];
-          inputSet.length = n_jobs;
-          let numPpl = 5000
-          inputSet.fill({ S0: numPpl, I0: Math.round(numPpl*0.005), infection_radius: x_values[x_i], iters: n_iters }, 0, n_jobs);
-          const job = dcp.compute.for(inputSet, workFn);
-          job.on('readystatechange', (ev) => $('#taLeft')[0].value += '\nReady State:' + ev);
-          job.on('result',           (ev) => {
-            n_req = n_req + n_iters;
-            console.log(n_req + ' / ' + tot_req);
-            $('#taRight')[0].value += "Response From: " + ev.sliceNumber + " Percent: " + (n_req/tot_req)*100 + "%\n";
-            console.log(ev)
-            for (let r of ev.result) {
-              exec_results.push(JSON.parse(r).maxR0);
-            }
-            console.log(x_values[x_i] + " - " + exec_results);
-            console.log(data);
-            y_results[x_i] = math.mean(exec_results)
-            Plotly.newPlot('myDiv', data, layout);
-          });
-          job.computeGroups=[{joinKey: 'rrc-edge', joinSecret: 'oQGMzq2qqr'}]
+          y2_results.push(0);
+          y3_results.push(0);
+          
+          std_results.push(0);
+          std2_results.push(0);
+          std3_results.push(0);
+          
+          exec_results.push([]);
+          exec2_results.push([]);
+          exec3_results.push([]);
 
-          if (runType == 0) {
-            const resultSet = await job.exec();
+          let numPpl = 5000
+          let conf = { 
+            S0: numPpl,
+            I0: Math.round(numPpl*0.005),
+            recovery_delay: x_values[x_i],
+            iters: n_iters,
+            group: x_i,
+          };
+          
+          // inputSet.fill(conf, 0, n_jobs);
+          for (var i = 0; i < n_jobs; i++) {
+            inputSet.push(conf);
           }
-          else if (runType == 1) {
-            const resultSet = await job.localExec();
+        }
+
+        Plotly.newPlot('myDiv', data, layout1, {displaylogo: false});
+        Plotly.newPlot('myDiv2', data2, layout2, {displaylogo: false});
+        Plotly.newPlot('myDiv3', data3, layout3, {displaylogo: false});
+        outputToBox("-- Beginning Simulation --")
+        
+        inputSet.sort(function (a, b) { return 0.5 - Math.random() })
+          
+        const job = dcp.compute.for(inputSet, workFn);
+        job.on('readystatechange', (ev) => {
+          $('#taLeft')[0].value += '\nReady State:' + ev;
+          outputToBox('Ready State:' + ev)
+        });
+        job.on('result',           (ev) => {
+          n_req = n_req + n_iters;
+          console.log(n_req + ' / ' + tot_req);
+          let percent = ((n_req/tot_req)*100).toFixed(2) ;
+          $("#pg-percent").text(percent)
+          $("#pg-current").text(n_req * 1000)  // 1000 iterations
+          $("#pg-total").text(tot_req * 1000)  // 1000 iterations
+          $("#pg").css("width", percent + "%")
+          $('#taRight')[0].value += "Response From: " + ev.sliceNumber + " Percent: " + percent + "%\n";
+          outputToBox("Response From: " + ev.sliceNumber + " Percent: " + percent + "%")
+          // console.log(ev)
+          
+          let exec_num = null;
+          for (let r of ev.result) {
+            const result = JSON.parse(r)
+            exec_num = result.config.group;
+            exec_results[exec_num].push(result.maxR0);
+            exec2_results[exec_num].push(result.pctInfected * 100);
+            exec3_results[exec_num].push(result.maxRt);
           }
-          else {
-            alert ("bruh")
-          }
+
+          // console.log(x_values[exec_num] + " - " + exec_num + " - " + exec_results);
+          // console.log(data);
+          
+          y_results[exec_num] = math.mean(exec_results[exec_num])
+          std_results[exec_num] = math.std(exec_results[exec_num])
+          
+          y2_results[exec_num] = math.mean(exec2_results[exec_num])
+          std2_results[exec_num] = math.std(exec2_results[exec_num])
+          
+          y3_results[exec_num] = math.mean(exec3_results[exec_num])
+          std3_results[exec_num] = math.std(exec3_results[exec_num])
+
+          data[1].x = [...x_results, ...[...x_results].reverse()];
+          data[1].y = [
+            ...y_results.map((v, i) => v + 1.96 * std_results[i]),
+            ...y_results.map((v, i) => v - 1.96 * std_results[i]).reverse(),
+          ]
+          
+          data2[1].x = [...x_results, ...[...x_results].reverse()];
+          data2[1].y = [
+            ...y2_results.map((v, i) => v + 1.96 * std2_results[i]),
+            ...y2_results.map((v, i) => v - 1.96 * std2_results[i]).reverse(),
+          ]
+          
+          data3[1].x = [...x_results, ...[...x_results].reverse()];
+          data3[1].y = [
+            ...y3_results.map((v, i) => v + 1.96 * std3_results[i]),
+            ...y3_results.map((v, i) => v - 1.96 * std3_results[i]).reverse(),
+          ]
+
+          // console.log(data)
+          Plotly.newPlot('myDiv', data, layout1, {displaylogo: false});
+          Plotly.newPlot('myDiv2', data2, layout2, {displaylogo: false});
+          Plotly.newPlot('myDiv3', data3, layout3, {displaylogo: false});
+        });
+        job.computeGroups=[{joinKey: 'rrc-edge', joinSecret: 'oQGMzq2qqr'}]
+
+        if (runType == 0) {
+          const resultSet = await job.exec();
+        }
+        else if (runType == 1) {
+          const resultSet = await job.localExec();
+        }
+        else {
+          alert ("bruh")
         }
         
         // console.log(Array.from(resultSet))
         console.log("done");
+        outputToBox("Simulations Complete!")
         // const allCaps = Array.from(resultSet).join('');
         
+      }
+
+      function outputToBox(text) {
+        let boxElement = $("#output-box");
+        if (boxElement.children().length == 8) {
+          boxElement.children()[0].remove();
+        }
+        boxElement.append($("<p style='margin:0'>").text(text));
       }
     </script>
 
   </head>
   <body>
-    <h1 style="font-family: Arial, Helvetica, sans-serif;">
-      <img src="./logo-dcl.png" height="100">
-      Distributed <span style="color: #8b0000">Covid</span> Simulation
-    </h1>
+    <div style="padding-left: 20px;">
+      <h1 style="font-family: Arial, Helvetica, sans-serif;">
+        <img src="./logo-dcl.png" height="100">
+        Distributed <span style="color: #8b0000">Covid</span> Simulation
+      </h1>
+      <h3 style="margin-top: 0;">Massively Parallel Monte Carlo Infectious Disease Modeling</h3>
+    <BR>
       <p>
         Run Simulation DCP:
-        <input type="button" value="Distribute" onclick="go(0)">
-        <input type="button" value="Distribute [LOCAL]" onclick="go(1)">
+        <input type="button" value="Launch Simulation" onclick="go(0)">
+        <input type="button" value="Launch Simulations Locally" onclick="go(1)">
       </p>
+    </div>
 
-      <div id="myDiv"></div>
+    <div style="display: block; width: 100%; text-align: center">
+      <span style="display: inline-block; width: 500px" id="myDiv"></span>
+      <span style="display: inline-block; width: 500px" id="myDiv2"></span>
+      <span style="display: inline-block; width: 500px" id="myDiv3"></span>
+      <p>(With 95% Confidence Interval)</p>
+    </div>
+    
 
-      <div style='display: inline-block'>Ready State Change<br><textarea cols="40" rows="25" id="taLeft"></textarea></div>
-      <div style='display: inline-block'>Individual Results<br> <textarea cols="60" rows="25" id="taRight"></textarea></div>
+    <div id="pg-box" style="width:80%; margin:0 auto; display: none;">
+      <h3>Percent Complete: <span id="pg-percent">0</span>% (<span id="pg-current">0</span> Iterations / <span id="pg-total">0</span> Total) - <span id="interact-total">0</span> Human Interactions Simulated</h3>
+      <div class="progress">
+        <div class="progress-bar progress-bar-striped progress-bar-animated" id="pg" role="progressbar" style="width: 0%"></div>
+      </div>
+    </div>
+
+      <div style="display: none;">
+        <div style='display: inline-block'>Ready State Change<br><textarea cols="40" rows="25" id="taLeft"></textarea></div>
+        <div style='display: inline-block'>Individual Results<br> <textarea cols="60" rows="25" id="taRight"></textarea></div>
+      </div>
+
+      <div id="output-box" style="padding-left:10%">
+      </div>
+
+      </div>
     </div>
   </body>
 </html>

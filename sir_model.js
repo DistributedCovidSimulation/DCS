@@ -174,7 +174,7 @@ function workFn(config) {
         }
     
         // Run and return results
-        run_model(n_ticks = 500) {
+        run_model(n_ticks = 1000) {
             for (let i = 1; i < n_ticks; i++) {
                 this.tick(i);
             }
@@ -186,8 +186,13 @@ function workFn(config) {
                 lS: last.S,
                 lI: last.I,
                 lR: last.R,
+
+                pctInfected: (last.I + last.R) / (last.I + last.R + last.S),
                 maxRt: this.results.reduce((a, i) => Math.max(a, i.rate), 0),
-                maxR0: this.results.reduce((a, i) => Math.max(a, i.rateFullySus), 0),
+                maxR0: last.rateFullySus,
+                interactions: this.people.reduce((a, i) => a + i.infectedOthersFullySus, 0)
+                    + this.people.length * n_ticks,
+                config: this.config,
             });
         }
     }

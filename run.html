@@ -12,8 +12,21 @@
               Render Single Instance:
               <input type="button" value="Start Render" onclick="start_render()">
             </p>
-            <textarea cols="60" rows="25" id="config" value="{}">
-      
+            <textarea cols="60" rows="15" id="config">
+              {
+                "S0": 5000,
+                "I0": 25,
+                "R0": 0,
+        
+                "infection_radius": 0.02,
+                "infection_chance": 0.01,
+            
+                "recovery_rate": 0.05,
+                "recovery_delay": 30,
+        
+                "movement_chance": 0.22,
+                "movement_max_amt": 0.005
+            }
             </textarea>
             <canvas id="outputCanvas" style='width: 800px; height: 800px'></canvas>
           </div>

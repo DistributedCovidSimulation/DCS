@@ -1,5 +1,5 @@
 async function start_render() {
-    config = JSON.parse(document.getElementById("config").value);
+    config = JSON.parse(document.getElementById("config").value || "{}");
     const model = workFn({ ...config, render_mode: true });
     
     const canvas = document.getElementById("outputCanvas");
@@ -23,7 +23,7 @@ async function start_render() {
       canvasData.data[index + 3] = a;
     }
 
-    const maxTime = 500;
+    const maxTime = 1000;
     let time = 0;
     const t = setInterval(() => {
       if (time >= maxTime) {
@@ -48,10 +48,10 @@ async function start_render() {
       }
       ctx.putImageData(canvasData, 0, 0);
   
-      ctx.fillText(`Tick: ${time}`, 10, 20);
-      ctx.fillText(`S: ${model.people.filter(i => i.status === 0).length}`, 10, 35);
-      ctx.fillText(`I: ${model.people.filter(i => i.status > 0).length}`, 10, 50);
-      ctx.fillText(`R: ${model.people.filter(i => i.status === -1).length}`, 10, 65);            
+      ctx.fillText(`Day:         ${time}`, 10, 20);
+      ctx.fillText(`Susceptible: ${model.people.filter(i => i.status === 0).length}`, 10, 35);
+      ctx.fillText(`Infected:    ${model.people.filter(i => i.status > 0).length}`, 10, 50);
+      ctx.fillText(`Recovered:   ${model.people.filter(i => i.status === -1).length}`, 10, 65);            
       
       const last = model.people
         .filter(
@@ -64,5 +64,5 @@ async function start_render() {
 
       ctx.fillText(`Effective Reproduction Number: ${Math.round((trans / last.length || 0) * 100) / 100}`, 10, 80);            
       ctx.fillText(`Basic Reproduction Number:     ${Math.round((transFullySus / last.length || 0) * 100) / 100}`, 10, 95);            
-    }, 1000/60);
+    }, 1000/40);
   }
