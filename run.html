@@ -7,11 +7,14 @@
             <script src="./sir_model.js"></script>
             <script src="./render_sim.js"></script>
         </head>
-        <div>
+        <div style='display: block'>
             <p>
               Render Single Instance:
               <input type="button" value="Start Render" onclick="start_render()">
             </p>
+            
+          </div>
+          <div style='display: block'>
             <textarea cols="60" rows="15" id="config">
               {
                 "S0": 5000,
@@ -29,6 +32,7 @@
             }
             </textarea>
             <canvas id="outputCanvas" style='width: 800px; height: 800px'></canvas>
+            <canvas id="outputCanvas2" style='width: 1000px; height: 100px'></canvas>
           </div>
     </html>
 </body>

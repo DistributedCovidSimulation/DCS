@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src='https://cdn.plot.ly/plotly-2.3.1.min.js'></script>
+    <script src="https://scheduler.distributed.computer/dcp-client/dcp-client.js"></script>
+    <script src="./sir_model.js"></script>
+    <script src="./render_sim.js"></script>
+    <script>
+const $ = document.querySelector.bind(document);
+    
+    async function go(runType) {
+      const n_jobs = 1000;
+      const inputSet = [];
+      inputSet.length = n_jobs;
+      inputSet.fill({ iters: 1 }, 0, n_jobs);
+      console.log(inputSet);
+
+      let n_response = 0;
+      const job = dcp.compute.for(inputSet, workFn);
+      job.on('readystatechange', (ev) => $('#taLeft').value += '\nReady State:' + ev);
+      job.on('result',           (ev) => {
+        n_response++; 
+        $('#taRight').value += "Response From: " + ev.sliceNumber + " Percent: " + (n_response/n_jobs)*100 + "%\n";
+        console.log(ev)
+        for (let r of ev.result) {
+          exec_results.push(JSON.parse(r).maxR0);
+          exec_results2.push(JSON.parse(r).pctInfected * 100);
+          exec_results3.push(JSON.parse(r).maxRt);
+        }
+        Plotly.newPlot('myDiv', data, layout1);
+        Plotly.newPlot('myDiv2', data2, layout2);
+        Plotly.newPlot('myDiv3', data3, layout3);
+      });
+      job.computeGroups=[{joinKey: 'rrc-edge', joinSecret: 'oQGMzq2qqr'}]
+
+      if (runType == 0) {
+        const resultSet = await job.exec(0.05);
+      }
+      else if (runType == 1) {
+        const resultSet = await job.localExec();
+      }
+      else {
+        alert ("bruh")
+      }
+      
+      // console.log(Array.from(resultSet))
+      console.log("done");
+      // const allCaps = Array.from(resultSet).join('');
+    }
+
+    </script>    
+
+  </head>
+  <body>
+    <div style="padding-left: 20px;">
+      <h1 style="font-family: Arial, Helvetica, sans-serif;">
+        <img src="./logo-dcl.png" height="100">
+        Distributed <span style="color: #8b0000">Covid</span> Simulation
+      </h1>
+      <h3 style="margin-top: 0;">Massively Parallel Monte Carlo Infectious Disease Modeling</h3>
+      <BR>
+      <p>
+        Run Simulation DCP:
+        <input type="button" value="Distribute" onclick="go(0)">
+        <input type="button" value="Distribute [LOCAL]" onclick="go(1)">
+      </p>  
+    </div>
+
+      <div style="display: block; width: 100%; text-align: center">
+        <span style="display: inline-block; width: 500px" id="myDiv"></span>
+        <span style="display: inline-block; width: 500px" id="myDiv2"></span>
+        <span style="display: inline-block; width: 500px" id="myDiv3"></span>
+      </div>
+
+      <div style='display: inline-block'>Ready State Change<br><textarea cols="40" rows="25" id="taLeft"></textarea></div>
+      <div style='display: inline-block'>Individual Results<br> <textarea cols="60" rows="25" id="taRight"></textarea></div>
+    </div>
+    <div>
+      <p>
+        Run Simulation DCP:
+        <input type="button" value="Start Render" onclick="start_render()">
+      </p>
+      <canvas id="outputCanvas" style='width: 800px; height: 800px'></canvas>
+    </div>
+
+        </script>
+        <script>
+          
+          let nInteractions = 0;
+          const exec_results = [];
+          const exec_results2 = [];
+          const exec_results3 = [];
+          var trace = {
+            x: exec_results,
+            type: 'histogram',
+            // nbinsx: 100
+            xbins: {
+              start: 3.0,
+              end: 3.9,
+              size: 0.01
+            }
+          };
+          var trace2 = {
+            x: exec_results2,
+            type: 'histogram',
+            // nbinsx: 100
+            xbins: {
+              start: 10,
+              end: 60,
+              size: 1
+            }
+          };
+          var trace3 = {
+            x: exec_results3,
+            type: 'histogram',
+            // nbinsx: 100
+            xbins: {
+              start: 0.9,
+              end: 2.5,
+              size: 0.02
+            }
+          };
+          var layout = {
+            title: {
+              text:'Plot Title',
+              font: {
+                family: 'Courier New, monospace',
+                size: 24
+              },
+              xref: 'paper',
+              x: 0.05,
+            },
+            xaxis: {
+              title: {
+                text: 'x Axis',
+                font: {
+                  family: 'Courier New, monospace',
+                  size: 18,
+                  color: '#7f7f7f'
+                }
+              },
+            },
+            yaxis: {
+              title: {
+                // text: 'y Axis',
+                font: {
+                  family: 'Courier New, monospace',
+                  size: 18,
+                  color: '#7f7f7f'
+                }
+              }
+            }
+          };
+
+        const layout1 = {
+          ...layout,
+          title: 'Basic Reproduction Number (R0)',
+          xaxis: {...layout.xaxis, title: {...layout.xaxis.title, text: 'R0'}}
+        }
+        const layout2 = {
+          ...layout,
+          title: '% Population Infected',
+          xaxis: {...layout.xaxis, title: {...layout.xaxis.title, text: '% Infected'}}
+        }
+        const layout3 = {
+          ...layout,
+          title: 'Effective Reproductive Number (Rt)',
+          xaxis: {...layout.xaxis, title: {...layout.xaxis.title, text: 'Rt'}}
+        }
+        var data = [trace];
+        var data2 = [trace2];
+        var data3 = [trace3];
+        Plotly.newPlot('myDiv', data, layout1);
+        Plotly.newPlot('myDiv2', data2, layout2);
+        Plotly.newPlot('myDiv3', data3, layout3);
+        </script>
+  </body>
+</html>
