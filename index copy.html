@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <script src='https://cdn.plot.ly/plotly-2.3.1.min.js'></script>
+    <script src="https://scheduler.distributed.computer/dcp-client/dcp-client.js"></script>
+    <script src="./sir_model.js"></script>
+    <script src="./render_sim.js"></script>
+    <script>
+const $ = document.querySelector.bind(document);
+    
+    async function go(runType) {
+      const n_jobs = 10;
+      const inputSet = [];
+      inputSet.length = n_jobs;
+      inputSet.fill({ infection_radius: 0.02, iters: 1 }, 0, n_jobs);
+      console.log(inputSet);
+
+      let n_response = 0;
+      const job = dcp.compute.for(inputSet, workFn);
+      job.on('readystatechange', (ev) => $('#taLeft').value += '\nReady State:' + ev);
+      job.on('result',           (ev) => {
+        n_response++; 
+        $('#taRight').value += "Response From: " + ev.sliceNumber + " Percent: " + (n_response/n_jobs)*100 + "%\n";
+        console.log(ev)
+        for (let r of ev.result) {
+          exec_results.push(JSON.parse(r).maxR0);
+        }
+        console.log(exec_results);
+        Plotly.newPlot('myDiv', data, layout);
+      });
+      job.computeGroups=[{joinKey: 'anu-edge', joinSecret: 'idMMZpFPu6'}]
+
+      if (runType == 0) {
+        const resultSet = await job.exec(0.05);
+      }
+      else if (runType == 1) {
+        const resultSet = await job.localExec();
+      }
+      else {
+        alert ("bruh")
+      }
+      
+      // console.log(Array.from(resultSet))
+      console.log("done");
+      // const allCaps = Array.from(resultSet).join('');
+    }
+
+    </script>    
+
+  </head>
+  <body>
+    <h1>Distributed Covid Simulation</h1>
+      <p>
+        Run Simulation DCP:
+        <input type="button" value="Distribute" onclick="go(0)">
+        <input type="button" value="Distribute [LOCAL]" onclick="go(1)">
+      </p>
+
+      <div id="myDiv"></div>
+
+      <div style='display: inline-block'>Ready State Change<br><textarea cols="40" rows="25" id="taLeft"></textarea></div>
+      <div style='display: inline-block'>Individual Results<br> <textarea cols="60" rows="25" id="taRight"></textarea></div>
+    </div>
+    <div>
+      <p>
+        Run Simulation DCP:
+        <input type="button" value="Start Render" onclick="start_render()">
+      </p>
+      <canvas id="outputCanvas" style='width: 800px; height: 800px'></canvas>
+    </div>
+
+        </script>
+        <script>
+          exec_results = [];
+          var trace = {
+                  x: exec_results,
+                  type: 'histogram',
+                  // nbinsx: 100
+                  xbins: {
+                    start: 2.5,
+                    end: 3.5,
+                    size: 0.01
+                  }
+                };
+                var layout = {
+                  title: {
+                    text:'Plot Title',
+                    font: {
+                      family: 'Courier New, monospace',
+                      size: 24
+                    },
+                    xref: 'paper',
+                    x: 0.05,
+                  },
+                  xaxis: {
+                    title: {
+                      text: 'x Axis',
+                      font: {
+                        family: 'Courier New, monospace',
+                        size: 18,
+                        color: '#7f7f7f'
+                      }
+                    },
+                  },
+                  yaxis: {
+                    title: {
+                      text: 'y Axis',
+                      font: {
+                        family: 'Courier New, monospace',
+                        size: 18,
+                        color: '#7f7f7f'
+                      }
+                    }
+                  }
+                };
+              var data = [trace];
+                Plotly.newPlot('myDiv', data, layout);
+        </script>
+  </body>
+</html>

@@ -18,6 +18,7 @@ function workFn(config) {
             this.infectTime = -1;
             this.infectedOthers = 0;
             this.infectedOthersFullySus = 0;
+            this.actions = 0;
         }
         
         move(dx, dy, index) {
@@ -129,12 +130,12 @@ function workFn(config) {
         }
     
         tick(time) {
-
             for (let i = 0; i < this.n; i++) {
                 if (this.rng() < this.config.movement_chance) {
                     const angle = this.rng() * Math.PI * 2;
                     const mag = this.rng() * this.config.movement_max_amt;
-
+                    
+                    this.people[i].actions++;
                     this.people[i].move(
                         Math.sin(angle) * mag,
                         Math.cos(angle) * mag,
@@ -147,8 +148,10 @@ function workFn(config) {
             for (let i = 0; i < this.n; i++) {
                 const p = this.people[i];
                 if (p.status > this.config.recovery_delay && this.rng() < this.config.recovery_rate) {
+                    p.actions++;
                     p.status = -1;
                 } else if (p.status > 0) {
+                    p.actions++;
                     p.status++;
                 }
             }
@@ -158,6 +161,7 @@ function workFn(config) {
                 const p = this.people[i];
                 if (p.status > 0) {
                     this.space_index.forRadius(p, this.config.infection_radius, (inf, sus) => {
+                        p.actions++;
                         if (inf !== sus && this.rng() < this.config.infection_chance) {
                             p.infectedOthersFullySus++;
                             if (sus.status === 0) {
@@ -190,8 +194,7 @@ function workFn(config) {
                 pctInfected: (last.I + last.R) / (last.I + last.R + last.S),
                 maxRt: this.results.reduce((a, i) => Math.max(a, i.rate), 0),
                 maxR0: last.rateFullySus,
-                interactions: this.people.reduce((a, i) => a + i.infectedOthersFullySus, 0)
-                    + this.people.length * n_ticks,
+                actions: this.people.reduce((a, i) => a + i.actions, 0),
                 config: this.config,
             });
         }

@@ -48,10 +48,11 @@ async function start_render() {
       }
       ctx.putImageData(canvasData, 0, 0);
   
-      ctx.fillText(`Day:         ${time}`, 10, 20);
-      ctx.fillText(`Susceptible: ${model.people.filter(i => i.status === 0).length}`, 10, 35);
-      ctx.fillText(`Infected:    ${model.people.filter(i => i.status > 0).length}`, 10, 50);
-      ctx.fillText(`Recovered:   ${model.people.filter(i => i.status === -1).length}`, 10, 65);            
+      ctx.fillText(`Distributed Covid Simulation [SIM]`, 10, 20);
+      ctx.fillText(`Day:         ${time}`, 10, 35);
+      ctx.fillText(`Susceptible: ${model.people.filter(i => i.status === 0).length}`, 10, 50);
+      ctx.fillText(`Infected:    ${model.people.filter(i => i.status > 0).length}`, 10, 65);
+      ctx.fillText(`Recovered:   ${model.people.filter(i => i.status === -1).length}`, 10, 80);            
       
       const last = model.people
         .filter(
@@ -62,7 +63,7 @@ async function start_render() {
       const trans = last.reduce((p, i) => i.infectedOthers + p, 0);
       const transFullySus = last.reduce((p, i) => i.infectedOthersFullySus + p, 0);
 
-      ctx.fillText(`Effective Reproduction Number: ${Math.round((trans / last.length || 0) * 100) / 100}`, 10, 80);            
-      ctx.fillText(`Basic Reproduction Number:     ${Math.round((transFullySus / last.length || 0) * 100) / 100}`, 10, 95);            
+      ctx.fillText(`Effective Reproduction Number: ${Math.round((trans / last.length || 0) * 100) / 100}`, 10, 95);            
+      ctx.fillText(`Basic Reproduction Number:     ${Math.round((transFullySus / last.length || 0) * 100) / 100}`, 10, 110);            
     }, 1000/40);
   }
