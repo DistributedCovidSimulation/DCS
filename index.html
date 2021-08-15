@@ -2,66 +2,106 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
     <script src='https://cdn.plot.ly/plotly-2.3.1.min.js'></script>
     <script src="https://scheduler.distributed.computer/dcp-client/dcp-client.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.4.4/math.js"></script>
     <script src="./sir_model.js"></script>
     <script src="./render_sim.js"></script>
     <script>
-      const $ = document.querySelector.bind(document);
-
+      let x_results = []
+      let y_results = []
       async function go(runType) {
-        const n_jobs = 10;
-        const inputSet = [];
-        inputSet.length = n_jobs;
-        inputSet.fill({ iters: 10 }, 0, n_jobs);
-        exec_results = [];
-        console.log(inputSet);
-
-        let n_response = 0;
-        const job = dcp.compute.for(inputSet, workFn);
-        job.on('readystatechange', (ev) => $('#taLeft').value += '\nReady State:' + ev);
-        job.on('result',           (ev) => {
-          n_response++; 
-          $('#taRight').value += "Response From: " + ev.sliceNumber + " Percent: " + (n_response/n_jobs)*100 + "%\n";
-          console.log(ev)
-          for (let r of ev.result) {
-            exec_results.push(JSON.parse(r).maxR0);
+        var trace1 = {
+          x: x_results, 
+          y: y_results, 
+          line: {color: "rgb(0,100,80)"}, 
+          mode: "lines", 
+          name: "Fair", 
+          type: "scatter"
+        };
+        var data = [trace1];
+        var layout = {
+          paper_bgcolor: "rgb(255,255,255)", 
+          plot_bgcolor: "rgb(229,229,229)", 
+          xaxis: {
+            gridcolor: "rgb(255,255,255)", 
+            showgrid: true, 
+            showline: false, 
+            showticklabels: true, 
+            tickcolor: "rgb(127,127,127)", 
+            ticks: "outside", 
+            zeroline: false
+          }, 
+          yaxis: {
+            gridcolor: "rgb(255,255,255)", 
+            showgrid: true, 
+            showline: false, 
+            showticklabels: true, 
+            tickcolor: "rgb(127,127,127)", 
+            ticks: "outside", 
+            zeroline: false
           }
-          console.log(exec_results);
-          var trace = {
-              x: exec_results,
-              type: 'histogram',
-              // nbinsx: 100
-              xbins: {
-                start: 1.3,
-                end: 2.0,
-                size: 0.01
-              }
-            };
-          var data = [trace];
-          Plotly.newPlot('myDiv', data);
-        });
-        job.computeGroups=[{joinKey: 'jkuat-edge', joinSecret: 'Wd7h2zpPCd'}]
+        };
 
-        if (runType == 0) {
-          const resultSet = await job.exec();
-        }
-        else if (runType == 1) {
-          const resultSet = await job.localExec();
-        }
-        else {
-          alert ("bruh")
+        let x_values = [0.025, 0.0225, 0.02, 0.0175, 0.015, 0.0125, 0.01];
+        const n_jobs = 20;
+        const n_iters = 1;
+
+        let tot_req = n_jobs*x_values.length*n_iters;
+        let n_req = 0;
+
+        for (let x_i = 0; x_i < x_values.length; x_i++){
+          x_results.push(x_values[x_i]);
+          y_results.push(0);
+          let inputSet = [];
+          var exec_results = [];
+          inputSet.length = n_jobs;
+          let numPpl = 5000
+          inputSet.fill({ S0: numPpl, I0: Math.round(numPpl*0.005), infection_radius: x_values[x_i], iters: n_iters }, 0, n_jobs);
+          const job = dcp.compute.for(inputSet, workFn);
+          job.on('readystatechange', (ev) => $('#taLeft')[0].value += '\nReady State:' + ev);
+          job.on('result',           (ev) => {
+            n_req = n_req + n_iters;
+            console.log(n_req + ' / ' + tot_req);
+            $('#taRight')[0].value += "Response From: " + ev.sliceNumber + " Percent: " + (n_req/tot_req)*100 + "%\n";
+            console.log(ev)
+            for (let r of ev.result) {
+              exec_results.push(JSON.parse(r).maxR0);
+            }
+            console.log(x_values[x_i] + " - " + exec_results);
+            console.log(data);
+            y_results[x_i] = math.mean(exec_results)
+            Plotly.newPlot('myDiv', data, layout);
+          });
+          job.computeGroups=[{joinKey: 'rrc-edge', joinSecret: 'oQGMzq2qqr'}]
+
+          if (runType == 0) {
+            const resultSet = await job.exec();
+          }
+          else if (runType == 1) {
+            const resultSet = await job.localExec();
+          }
+          else {
+            alert ("bruh")
+          }
         }
         
         // console.log(Array.from(resultSet))
         console.log("done");
         // const allCaps = Array.from(resultSet).join('');
+        
       }
     </script>
 
   </head>
   <body>
-    <h1>Distributed Covid Simulation</h1>
+    <h1 style="font-family: Arial, Helvetica, sans-serif;">
+      <img src="./logo-dcl.png" height="100">
+      Distributed <span style="color: #8b0000">Covid</span> Simulation
+    </h1>
       <p>
         Run Simulation DCP:
         <input type="button" value="Distribute" onclick="go(0)">
@@ -72,16 +112,6 @@
 
       <div style='display: inline-block'>Ready State Change<br><textarea cols="40" rows="25" id="taLeft"></textarea></div>
       <div style='display: inline-block'>Individual Results<br> <textarea cols="60" rows="25" id="taRight"></textarea></div>
-    </div>
-    <div>
-      <p>
-        Render Single Instance:
-        <input type="button" value="Start Render" onclick="start_render()">
-      </p>
-      <textarea cols="60" rows="25" id="config" value="{}">
-
-      </textarea>
-      <canvas id="outputCanvas" style='width: 800px; height: 800px'></canvas>
     </div>
   </body>
 </html>

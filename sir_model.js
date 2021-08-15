@@ -199,7 +199,7 @@ function workFn(config) {
             return model
         }
 
-        progress(1 / (config.iters || 10));
+        progress(i / (config.iters || 10));
         
         results.push(model.run_model());
     }

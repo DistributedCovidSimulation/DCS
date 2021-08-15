@@ -1,0 +1,21 @@
+<body>
+    <html>
+        <head>
+            <meta charset="utf-8">
+            <script src='https://cdn.plot.ly/plotly-2.3.1.min.js'></script>
+            <script src="https://scheduler.distributed.computer/dcp-client/dcp-client.js"></script>
+            <script src="./sir_model.js"></script>
+            <script src="./render_sim.js"></script>
+        </head>
+        <div>
+            <p>
+              Render Single Instance:
+              <input type="button" value="Start Render" onclick="start_render()">
+            </p>
+            <textarea cols="60" rows="25" id="config" value="{}">
+      
+            </textarea>
+            <canvas id="outputCanvas" style='width: 800px; height: 800px'></canvas>
+          </div>
+    </html>
+</body>
